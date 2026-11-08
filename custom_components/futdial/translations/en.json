@@ -53,7 +53,7 @@
       },
       "mando": {
         "title": "Set-top box remote",
-        "description": "FutDial can dial the channel on your Movistar Plus+ set-top box through a remote entity (Broadlink, Android TV…). Leave the remote empty to disable it.",
+        "description": "FutDial can dial the channel on your Movistar+ set-top box through a remote entity. With a Broadlink, choose 'Movistar+ set-top box (built-in codes)' and nothing else is needed. Leave the remote empty to disable it.",
         "data": {
           "mando": "Remote",
           "modo_mando": "How digits are sent",

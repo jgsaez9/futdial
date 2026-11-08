@@ -160,7 +160,8 @@ FutDial puede marcar el dial en el descodificador de Movistar Plus+ usando cualq
 
 1. **Ajustes → Dispositivos y servicios → FutDial → Configurar → Mando**.
 2. Elige la entidad del mando (p. ej. `remote.rm_mini_3`), la pausa entre dígitos y cómo se envían los números:
-   - **Códigos IR por dígito**: pega el código de cada tecla del 0 al 9, tal cual lo usas en `remote.send_command` (con o sin `b64:`). Sólo hacen falta los dígitos de los diales que vayas a usar.
+   - **Descodificador Movistar+ (códigos incluidos)** *(recomendado con Broadlink)*: FutDial ya trae los códigos IR de las teclas 0–9 del mando de Movistar+, así que no hay que aprender ni pegar nada. Son los publicados por la comunidad de Home Assistant ([hilo](https://community.home-assistant.io/t/movistar-plus-hd-set-top-box-arris-ir-codes-with-broadlink-r3-mini/151962)).
+   - **Mis propios códigos IR por dígito**: pega el código de cada tecla del 0 al 9, tal cual lo usas en `remote.send_command` (con o sin `b64:`). Sólo hacen falta los dígitos de los diales que vayas a usar.
    - **Plantilla de comando**: `{digito}` se sustituye por cada número. Por ejemplo `{digito}` con dispositivo `movistar` para comandos aprendidos en Broadlink llamados `0`…`9`, o `KEYCODE_{digito}` para Android TV.
 
 Con el mando configurado tendrás:

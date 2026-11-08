@@ -1,6 +1,7 @@
 """Enviar el dial al descodificador a través de una entidad `remote`.
 
 Funciona con cualquier integración que implemente `remote.send_command`:
+- Broadlink con los códigos del descodificador Movistar+ ya incluidos.
 - Broadlink (RM mini, RM4…) con códigos IR en base64 por dígito
   (`b64:…`) o con comandos aprendidos por nombre (dispositivo + "5").
 - Android TV Remote, Sony, Philips…, con una plantilla como
@@ -29,10 +30,27 @@ from .const import (
     DEFAULT_RETARDO,
     DOMAIN,
     MODO_CODIGOS,
+    MODO_MOVISTAR,
     MODO_PLANTILLA,
 )
 
 _B64 = re.compile(r"^[A-Za-z0-9+/=\s]+$")
+
+# Teclas 0-9 del mando del descodificador Movistar+ (Arris/UHD) en formato
+# Broadlink. Publicadas en la comunidad de Home Assistant:
+# https://community.home-assistant.io/t/movistar-plus-hd-set-top-box-arris-ir-codes-with-broadlink-r3-mini/151962
+CODIGOS_MOVISTAR: dict[str, str] = {
+    "0": "OABEAB8fFSgLFAseCx4LHgseCx4LHgsoCzILCgsUCx4LPAseCwAHAh8fFSgLFAseCx4LHgseCx4LHgsoCzILCgsUCx4LPAseCwAHAg==",
+    "1": "OABEAB8fFSgLFAseCx4LHgseCx4LKAseCygLFAsUCx4LPAseCwAHAh8fFSgLFAseCx4LHgseCx4LKAseCygLFAsUCx4LPAseCwAHAg==",
+    "2": "OABEAB8fFSgLFAseCx4LHgseCx4LKAsoCx4LFAsUCx4LHgseCwAHIB8fFSgLFAseCx4LHgseCx4LKAsoCx4LFAsUCx4LHgseCwAHIA==",
+    "3": "OABEAB8fFSgLFAseCx4LHgseCx4LKAsyCxQLFAsUCx4LHgsoCwAHFh8fFSgLFAseCx4LHgseCx4LKAsyCxQLFAsUCx4LHgsoCwAHFg==",
+    "4": "OABAAB8fFSgLFAseCx4LHgseCx4LHgsoCzIWHgseCzwLFAsABwwfHxUoCxQLHgseCx4LHgseCx4LKAsyFh4LHgs8CxQLAAcM",
+    "5": "OABAAB8fFSgLFAseCx4LHgseCx4LHgsyCygWHgseCzwLHgsABwIfHxUoCxQLHgseCx4LHgseCx4LMgsoFh4LHgs8Cx4LAAcC",
+    "6": "OABAAB8fFSgLFAseCx4LHgseCx4LHgs8Cx4WHgseCx4LHgsAByAfHxUoCxQLHgseCx4LHgseCx4LPAseFh4LHgseCx4LAAcg",
+    "7": "OABAAB8fFSgLFAseCx4LHgseCx4LKAsUCzwWHgseCx4LKAsABxYfHxUoCxQLHgseCx4LHgseCygLFAs8Fh4LHgseCygLAAcW",
+    "8": "OABAAB8fFSgLFAseCx4LHgseCx4LKAseCzIWHgseCx4LMgsABwwfHxUoCxQLHgseCx4LHgseCygLHgsyFh4LHgseCzILAAcM",
+    "9": "OABAAB8fFSgLFAseCx4LHgseCx4LKAsoCygWHgseCx4LPAsABwIfHxUoCxQLHgseCx4LHgseCygLKAsoFh4LHgseCzwLAAcC",
+}
 
 
 def mando_configurado(options: dict[str, Any]) -> bool:
@@ -68,7 +86,9 @@ def comandos_para_dial(options: dict[str, Any], dial: int) -> list[str]:
     digitos = str(int(dial))
     modo = options.get(CONF_MODO_MANDO, MODO_CODIGOS)
     comandos: list[str] = []
-    if modo == MODO_PLANTILLA:
+    if modo == MODO_MOVISTAR:
+        comandos = [f"b64:{CODIGOS_MOVISTAR[d]}" for d in digitos]
+    elif modo == MODO_PLANTILLA:
         plantilla = options.get(CONF_PLANTILLA) or DEFAULT_PLANTILLA
         comandos = [plantilla.replace("{digito}", d) for d in digitos]
     else:
@@ -82,7 +102,7 @@ def comandos_para_dial(options: dict[str, Any], dial: int) -> list[str]:
                 translation_placeholders={"digitos": ", ".join(faltan), "dial": str(dial)},
             )
         comandos = [normalizar_codigo(options[CONF_CODIGOS[int(d)]]) for d in digitos]
-    if final := (options.get(CONF_TECLA_FINAL) or "").strip():
+    if modo != MODO_MOVISTAR and (final := (options.get(CONF_TECLA_FINAL) or "").strip()):
         comandos.append(normalizar_codigo(final) if modo == MODO_CODIGOS else final)
     return comandos
 

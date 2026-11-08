@@ -53,7 +53,7 @@
       },
       "mando": {
         "title": "Mando del descodificador",
-        "description": "FutDial puede marcar el dial en tu descodificador de Movistar Plus+ usando una entidad «remote» (Broadlink, Android TV…). Deja el mando vacío para desactivarlo.",
+        "description": "FutDial puede marcar el dial en tu descodificador de Movistar+ usando una entidad «remote». Si tienes un Broadlink, elige «Descodificador Movistar+ (códigos incluidos)» y no tendrás que configurar nada más. Deja el mando vacío para desactivarlo.",
         "data": {
           "mando": "Mando",
           "modo_mando": "Cómo se envían los números",

@@ -21,6 +21,7 @@ CONF_DISPOSITIVO = "dispositivo"
 CONF_RETARDO = "retardo"
 CONF_TECLA_FINAL = "tecla_final"
 CONF_CODIGOS = [f"codigo_{d}" for d in range(10)]
+MODO_MOVISTAR = "movistar"
 MODO_CODIGOS = "codigos"
 MODO_PLANTILLA = "plantilla"
 DEFAULT_RETARDO = 0.9

@@ -38,6 +38,7 @@ from .const import (
     INTERVALOS,
     MAX_DIAS,
     MODO_CODIGOS,
+    MODO_MOVISTAR,
     MODO_PLANTILLA,
     NAME,
 )
@@ -179,8 +180,10 @@ class FutDialOptionsFlow(OptionsFlow):
                 CONF_MODO_MANDO: user_input[CONF_MODO_MANDO],
                 CONF_RETARDO: float(user_input[CONF_RETARDO]),
             }
-            if not self._mando[CONF_MANDO]:
-                # Sin mando: se desactiva la función
+            if (
+                not self._mando[CONF_MANDO]  # sin mando: se desactiva la función
+                or self._mando[CONF_MODO_MANDO] == MODO_MOVISTAR  # códigos incluidos
+            ):
                 return self._guardar(self._mando)
             if self._mando[CONF_MODO_MANDO] == MODO_PLANTILLA:
                 return await self.async_step_plantilla()
@@ -192,12 +195,16 @@ class FutDialOptionsFlow(OptionsFlow):
                     CONF_MANDO, description={"suggested_value": opts.get(CONF_MANDO)}
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="remote")),
                 vol.Required(
-                    CONF_MODO_MANDO, default=opts.get(CONF_MODO_MANDO, MODO_CODIGOS)
+                    CONF_MODO_MANDO, default=opts.get(CONF_MODO_MANDO, MODO_MOVISTAR)
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
                             selector.SelectOptionDict(
-                                value=MODO_CODIGOS, label="Códigos IR por dígito (Broadlink b64)"
+                                value=MODO_MOVISTAR,
+                                label="Descodificador Movistar+ (códigos incluidos, Broadlink)",
+                            ),
+                            selector.SelectOptionDict(
+                                value=MODO_CODIGOS, label="Mis propios códigos IR por dígito (Broadlink b64)"
                             ),
                             selector.SelectOptionDict(
                                 value=MODO_PLANTILLA,
