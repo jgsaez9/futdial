@@ -93,7 +93,7 @@
           "tecla_final": "Final command (optional)"
         },
         "data_description": {
-          "plantilla": "Examples: '{digito}' for Broadlink learned commands named 0…9, or 'KEYCODE_{digito}' for Android TV.",
+          "plantilla": "Examples: \"{digito}\" for Broadlink learned commands named 0…9, or \"KEYCODE_{digito}\" for Android TV.",
           "dispositivo": "Device name used when learning the commands in Broadlink (e.g. movistar)."
         }
       }
@@ -117,7 +117,7 @@
       "message": "No remote is configured. Choose it in FutDial → Configure → Remote."
     },
     "sin_partido": {
-      "message": "No match found for '{equipo}' on Movistar Plus+."
+      "message": "No match found for \"{equipo}\" on Movistar Plus+."
     }
   },
   "services": {
