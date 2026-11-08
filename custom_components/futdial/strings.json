@@ -11,7 +11,7 @@
           "incluir_repeticiones": "Include replays and highlights"
         },
         "data_description": {
-          "equipos": "A 'Próximo partido <team>' sensor is created for each one. E.g. Atleti, Real Madrid, Betis",
+          "equipos": "A 'Próximo partido …' sensor is created for each team. E.g. Atleti, Real Madrid, Betis",
           "dias": "Each day is about 11 MB of TV guide data.",
           "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
           "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."
@@ -34,7 +34,7 @@
           "incluir_repeticiones": "Include replays and highlights"
         },
         "data_description": {
-          "equipos": "A 'Próximo partido <team>' sensor is created for each one. E.g. Atleti, Real Madrid, Betis",
+          "equipos": "A 'Próximo partido …' sensor is created for each team. E.g. Atleti, Real Madrid, Betis",
           "dias": "Each day is about 11 MB of TV guide data.",
           "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
           "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."

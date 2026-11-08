@@ -54,7 +54,9 @@ Todo se configura desde la interfaz (y se puede cambiar después en **Configurar
 - **Intervalo de actualización** (por defecto 120 min). La guía de cada día pesa unos 11 MB; los días a partir de pasado mañana se refrescan como mucho cada 6 h.
 - **Incluir repeticiones y resúmenes**.
 
-Requiere Home Assistant 2024.11 o posterior. El logo dentro de Home Assistant se muestra a partir de la 2026.3.
+Requiere Home Assistant 2024.11 o posterior.
+
+> **Logo:** a partir de Home Assistant 2026.3 el logo aparece en *Ajustes → Dispositivos y servicios* una vez instalada la integración y reiniciado HA. En la lista de HACS se verá un icono genérico: HACS sólo carga iconos del repositorio central de *brands*, que ya no admite integraciones personalizadas.
 
 ## Ejemplos
 
