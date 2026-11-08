@@ -57,7 +57,13 @@ Todo se configura desde la interfaz (y se puede cambiar después en **Configurar
 - **Incluir repeticiones y resúmenes**.
 - **Buscar en todos los canales**: por defecto sólo se consultan los ~65 canales donde se emite fútbol (Movistar Plus+, DAZN, LALIGA TV, generalistas y autonómicos): unos 4 MB por día en lugar de 11 MB y cuatro veces más rápido.
 
-La programación se descarga en segundo plano: al guardar la configuración, los sensores aparecen al momento en estado «desconocido» y se rellenan en unos segundos. Si no hay conexión, se reintenta cada 5 minutos.
+La programación se guarda en disco. Al arrancar Home Assistant, FutDial carga al instante lo que ya tenía y **no descarga nada mientras HA arranca**: espera a que termine y sólo descarga si, según el intervalo elegido, ya toca. La primera vez, los sensores aparecen en estado «desconocido» y se rellenan en unos segundos. Si falla la conexión, se mantienen los datos que había y se reintenta cada 5 minutos.
+
+### ¿Hace falta reiniciar al actualizar?
+
+Sí. Home Assistant carga el código de las integraciones una sola vez, al arrancar, y no permite sustituirlo en caliente (la opción «Recargar» de la integración vuelve a leer la configuración, pero con el código antiguo). Por eso HACS pide reiniciar tras cualquier actualización de una integración. Basta con **Ajustes → Sistema → ⏻ → Reiniciar Home Assistant** (no hace falta reiniciar el equipo) y, gracias a la caché, FutDial vuelve a tener sus datos al momento.
+
+Para ver cuánto tarda en arrancar cada integración: **Ajustes → Sistema → Reparaciones → ⋮ → Tiempos de inicio de integraciones**.
 
 Los equipos se reconocen comparando cada lado del partido, así que «FC Barcelona» no confunde al Espanyol de Barcelona ni «Racing de Santander» al Racing de Ferrol, y los partidos del femenino, filial o juvenil no cuentan como del primer equipo.
 

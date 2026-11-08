@@ -7,10 +7,12 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -44,6 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Descargas simultáneas (cada una es un día de guía)
 _PARALLEL = 3
+STORAGE_VERSION = 1
 
 
 @dataclass
@@ -99,6 +102,82 @@ class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
         self._cache: dict[date, _DayCache] = {}
         self._session = async_get_clientsession(hass)
         self._sem = asyncio.Semaphore(_PARALLEL)
+        # La programación se guarda en disco para tenerla al reiniciar HA
+        self._store: Store[dict[str, Any]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}", private=False
+        )
+
+    @property
+    def intervalo(self) -> timedelta:
+        """Intervalo configurado entre descargas."""
+        return self._intervalo
+
+    def _firma(self) -> dict[str, Any]:
+        """Opciones que cambian qué se descarga (si cambian, la caché no vale)."""
+        return {"todos_los_canales": self.canales is None, "dias": self.dias}
+
+    async def async_cargar_cache(self) -> datetime | None:
+        """Carga la programación guardada. Devuelve cuándo se descargó.
+
+        Devuelve None si no hay nada útil guardado o si se guardó con otras
+        opciones (en ese caso hay que descargar).
+        """
+        try:
+            guardado = await self._store.async_load()
+        except Exception:  # noqa: BLE001 - un fichero corrupto no debe impedir arrancar
+            _LOGGER.warning("No se pudo leer la programación guardada; se descargará de nuevo")
+            return None
+        if not guardado:
+            return None
+        ayer = dt_util.now().date() - timedelta(days=1)
+        try:
+            for dia_txt, info in guardado.get("dias", {}).items():
+                dia = date.fromisoformat(dia_txt)
+                if dia < ayer:
+                    continue
+                self._cache[dia] = _DayCache(
+                    datetime.fromisoformat(info["fetched"]),
+                    [Emision.from_dict(e) for e in info["emisiones"]],
+                )
+        except (KeyError, TypeError, ValueError) as err:
+            _LOGGER.warning("Programación guardada no válida (%s); se descargará de nuevo", err)
+            self._cache.clear()
+            return None
+        if not self._cache:
+            return None
+        self.async_set_updated_data(self._combinar())
+        hoy = dt_util.now().date()
+        if guardado.get("firma") != self._firma() or hoy not in self._cache:
+            return None
+        return min(
+            c.fetched for d, c in self._cache.items() if d in (hoy, hoy + timedelta(days=1))
+        )
+
+    def _datos_a_guardar(self) -> dict[str, Any]:
+        return {
+            "firma": self._firma(),
+            "dias": {
+                dia.isoformat(): {
+                    "fetched": c.fetched.isoformat(),
+                    "emisiones": [e.to_dict() for e in c.emisiones],
+                }
+                for dia, c in self._cache.items()
+            },
+        }
+
+    def _combinar(self) -> list[Emision]:
+        """Une los días en caché, sin duplicados y con repeticiones marcadas."""
+        seen: set[int] = set()
+        result: list[Emision] = []
+        for day in sorted(self._cache):
+            for em in self._cache[day].emisiones:
+                key = em.id or hash((em.dial, em.inicio, em.partido))
+                if key not in seen:
+                    seen.add(key)
+                    result.append(em)
+        result = marcar_repeticiones(result)
+        result.sort(key=lambda e: (e.inicio, e.dial))
+        return result
 
     async def _fetch_parse(self, day: date) -> list[Emision]:
         async with self._sem:
@@ -155,22 +234,14 @@ class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
             if day < today - timedelta(days=1) or day > days[-1]:
                 del self._cache[day]
 
+        # Si algo falló, reintenta pronto en lugar de esperar al intervalo
+        # (que puede ser de días); mientras, se sigue usando lo que hay
+        self.update_interval = RETRY_INTERVAL if errores else self._intervalo
         if not self._cache:
-            # Sin datos: reintenta pronto en lugar de esperar al intervalo
-            self.update_interval = RETRY_INTERVAL
             raise UpdateFailed("; ".join(errores) or "No se pudo descargar la guía")
-        self.update_interval = self._intervalo
 
-        seen: set[int] = set()
-        result: list[Emision] = []
-        for day in sorted(self._cache):
-            for em in self._cache[day].emisiones:
-                key = em.id or hash((em.dial, em.inicio, em.partido))
-                if key not in seen:
-                    seen.add(key)
-                    result.append(em)
-        result = marcar_repeticiones(result)
-        result.sort(key=lambda e: (e.inicio, e.dial))
+        result = self._combinar()
+        self._store.async_delay_save(self._datos_a_guardar, 5)
         _LOGGER.debug(
             "Guía actualizada: %d emisiones de fútbol en %d días", len(result), len(self._cache)
         )

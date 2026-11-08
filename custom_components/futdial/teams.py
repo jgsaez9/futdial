@@ -22,7 +22,7 @@ class Equipo:
     id: str
     nombre: str
     grupo: str
-    patrones: tuple[tuple[str, ...], ...]
+    patrones: tuple[frozenset[str], ...]
     excluir: frozenset[str] = frozenset()
     excluir_competicion: frozenset[str] = frozenset()
     alias: tuple[str, ...] = ()
@@ -41,10 +41,10 @@ def _e(
     alias: tuple[str, ...] = (),
     filial: bool = False,
 ) -> Equipo:
-    pats = tuple(tuple(normalize(p)) for p in patrones)
+    pats = tuple(frozenset(normalize(p)) for p in patrones)
     claves = {" ".join(normalize(nombre)), id_.replace("_", " ")}
     claves.update(" ".join(normalize(a)) for a in alias)
-    claves.update(" ".join(p) for p in pats)
+    claves.update(" ".join(normalize(p)) for p in patrones)
     return Equipo(
         id=id_,
         nombre=nombre,
@@ -148,21 +148,16 @@ for _eq in EQUIPOS_LISTA:
         _POR_CLAVE.setdefault(_k, _eq)
 
 
-def _lados(partido: str) -> list[set[str]]:
-    partes = partido.split(" - ") if " - " in partido else partido.split("-")
-    return [set(normalize(p)) for p in partes]
-
-
 def coincide(em: Emision, equipo: Equipo) -> bool:
     """True si el equipo juega en esta emisión (en uno de los dos lados)."""
-    if equipo.excluir_competicion & set(normalize(em.competicion)):
+    if equipo.excluir_competicion & em.palabras_competicion:
         return False
     if em.secundario and not equipo.filial:
         return False
-    for lado in _lados(em.partido):
+    for lado in em.lados:
         if lado & equipo.excluir:
             continue
-        if any(set(p) <= lado for p in equipo.patrones):
+        if any(p <= lado for p in equipo.patrones):
             return True
     return False
 

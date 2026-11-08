@@ -18,6 +18,8 @@ from homeassistant.core import (
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
@@ -146,14 +148,34 @@ def set_query(hass: HomeAssistant, entry: FutDialConfigEntry, consulta: str) -> 
 async def async_setup_entry(hass: HomeAssistant, entry: FutDialConfigEntry) -> bool:
     """Configura la integración desde una entrada de configuración."""
     coordinator = FutDialCoordinator(hass, entry)
+    # 1) Programación guardada en disco: los sensores tienen datos al instante
+    descargada = await coordinator.async_cargar_cache()
     entry.runtime_data = RuntimeData(coordinator=coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    # La guía tarda en descargarse: no se bloquea la configuración (ni el
-    # arranque de Home Assistant) esperando a ella. Las entidades se
-    # actualizan solas cuando llegan los datos.
-    entry.async_create_background_task(
-        hass, coordinator.async_refresh(), f"{DOMAIN}_primera_descarga"
-    )
+
+    @callback
+    def _descargar(*_: Any) -> None:
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh(), f"{DOMAIN}_descarga"
+        )
+
+    @callback
+    def _ha_arrancado(_hass: HomeAssistant) -> None:
+        # 2) Nada de red ni CPU mientras arranca Home Assistant: la descarga
+        #    se hace después y sólo si la programación guardada ya toca
+        #    actualizarla según el intervalo elegido.
+        if descargada is None:
+            _descargar()
+            return
+        edad = dt_util.utcnow() - descargada
+        if edad >= coordinator.intervalo:
+            _descargar()
+        else:
+            entry.async_on_unload(
+                async_call_later(hass, coordinator.intervalo - edad, _descargar)
+            )
+
+    entry.async_on_unload(async_at_started(hass, _ha_arrancado))
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     return True
 

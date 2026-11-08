@@ -135,6 +135,61 @@ class Emision:
     directo: bool
     estreno: bool
     repeticion: bool = False
+    # Precalculados una sola vez (las búsquedas se repiten cada pocos minutos)
+    palabras: tuple[str, ...] = field(init=False, repr=False, compare=False)
+    clave: frozenset[str] = field(init=False, repr=False, compare=False)
+    lados: tuple[frozenset[str], ...] = field(init=False, repr=False, compare=False)
+    palabras_competicion: frozenset[str] = field(init=False, repr=False, compare=False)
+    secundario: bool = field(init=False, repr=False, compare=False)
+    es_resumen: bool = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        titulo = normalize(self.partido)
+        comp = normalize(self.competicion)
+        partes = self.partido.split(" - ") if " - " in self.partido else self.partido.split("-")
+        comp_txt = " ".join(comp)
+        _set = object.__setattr__
+        _set(self, "palabras", (*titulo, *comp))
+        _set(self, "clave", frozenset(w for w in titulo if w not in _STOPWORDS))
+        _set(self, "lados", tuple(frozenset(normalize(p)) for p in partes))
+        _set(self, "palabras_competicion", frozenset(comp))
+        _set(
+            self,
+            "secundario",
+            bool(set(titulo) & _SECONDARY_WORDS)
+            or any(c in comp_txt for c in _SECONDARY_COMPETITIONS),
+        )
+        _set(self, "es_resumen", comp_txt.startswith(("resumen", "resumenes")))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Para guardar en disco."""
+        return {
+            "id": self.id,
+            "partido": self.partido,
+            "competicion": self.competicion,
+            "canal": self.canal,
+            "codigo_canal": self.codigo_canal,
+            "dial": self.dial,
+            "inicio": self.inicio.isoformat(),
+            "fin": self.fin.isoformat(),
+            "directo": self.directo,
+            "estreno": self.estreno,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Emision:
+        return cls(
+            id=int(data["id"]),
+            partido=data["partido"],
+            competicion=data["competicion"],
+            canal=data["canal"],
+            codigo_canal=data["codigo_canal"],
+            dial=int(data["dial"]),
+            inicio=datetime.fromisoformat(data["inicio"]),
+            fin=datetime.fromisoformat(data["fin"]),
+            directo=bool(data["directo"]),
+            estreno=bool(data["estreno"]),
+        )
 
     @property
     def canal_dial(self) -> str:
@@ -145,22 +200,6 @@ class Emision:
     def original(self) -> bool:
         """True si es la emisión en directo/estreno (no una repetición)."""
         return (self.directo or self.estreno) and not self.repeticion
-
-    @property
-    def es_resumen(self) -> bool:
-        comp = self.competicion.lower()
-        return comp.startswith("resumen") or comp.startswith("resúmenes")
-
-    @property
-    def palabras(self) -> list[str]:
-        return normalize(f"{self.partido} {self.competicion}")
-
-    @property
-    def secundario(self) -> bool:
-        if set(normalize(self.partido)) & _SECONDARY_WORDS:
-            return True
-        comp = " ".join(normalize(self.competicion))
-        return any(c in comp for c in _SECONDARY_COMPETITIONS)
 
 
 @dataclass(slots=True)
@@ -322,19 +361,18 @@ def _matches(tokens: list[str], palabras: list[str]) -> bool:
 
 def agrupar(emisiones: list[Emision]) -> list[Partido]:
     """Agrupa emisiones simultáneas del mismo partido en distintos canales."""
-    def _key(title: str) -> set[str]:
-        return {w for w in normalize(title) if w not in _STOPWORDS}
-
-    def _same(a: set[str], b: set[str]) -> bool:
+    def _same(a: frozenset[str], b: frozenset[str]) -> bool:
         if not a or not b:
             return a == b
         return len(a & b) / len(a | b) >= 0.5
 
     partidos: list[Partido] = []
     for em in sorted(emisiones, key=lambda e: (e.inicio, e.dial)):
-        key = _key(em.partido)
         for p in partidos:
-            if abs(p.inicio - em.inicio) <= _GROUP_WINDOW and _same(_key(p.partido), key):
+            if (
+                abs(p.inicio - em.inicio) <= _GROUP_WINDOW
+                and _same(p.principal.clave, em.clave)
+            ):
                 if all(e.dial != em.dial for e in p.emisiones):
                     p.emisiones.append(em)
                     p.fin = max(p.fin, em.fin)
@@ -346,9 +384,8 @@ def agrupar(emisiones: list[Emision]) -> list[Partido]:
     return partidos
 
 
-def _clave_partido(em: Emision) -> tuple[frozenset[str], str]:
-    titulo = frozenset(w for w in normalize(em.partido) if w not in _STOPWORDS)
-    return titulo, " ".join(normalize(em.competicion))
+def _clave_partido(em: Emision) -> tuple[frozenset[str], frozenset[str]]:
+    return em.clave, em.palabras_competicion
 
 
 def marcar_repeticiones(emisiones: list[Emision]) -> list[Emision]:
