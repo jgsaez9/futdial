@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import aiohttp
 
@@ -36,7 +37,35 @@ EPG_PARAMS = {
     "demarcation": "1",
 }
 USER_AGENT = "Mozilla/5.0 (compatible; HomeAssistant futdial)"
-TIMEOUT = aiohttp.ClientTimeout(total=90)
+TIMEOUT = aiohttp.ClientTimeout(total=120)
+
+# Canales donde se emite fútbol: generalistas, deportes de Movistar Plus+/DAZN
+# y autonómicas. Pedir sólo estos reduce la guía de ~11 MB a ~3 MB por día y
+# el tiempo de respuesta de ~12 s a ~3 s. Los códigos desconocidos se ignoran.
+CANALES_FUTBOL: tuple[str, ...] = (
+    # Generalistas
+    "TVE", "LA2", "A3", "C4", "T5", "SEXTA", "SEPTIM", "MPLUS", "TV3CAT", "13TV",
+    # Movistar Plus+ / DAZN / LALIGA
+    "VAMOSD", "VAM2SD", "MELLAV", "MCOPA", "MLIGA", "DAZNLI", "MLIGS", "MLIG1",
+    "DAZNL2", "MLIGS2", "MLIG2", "MLIG3", "MLIGS3", "CPDEP", "ARTHUR", "USOP2",
+    "USOP3", "USOP11", "MULTI8", "M1SD", "M2SD", "DAZN3", "DAZN4", "UCL",
+    "CHAPIO", "CHAP1", "CHAP2", "CHAP3", "CHAP4", "CHAP5", "CHAP6", "CHAP7",
+    "CHAP8", "CHAP9", "CHAP10", "CHAP11", "CHAP12", "CHAP13", "CHAP14", "CHAP15",
+    "CHAP16", "CHAP18", "CHAP19",
+    # Otros deportes
+    "ESP", "ESP2", "GOL", "TDEP", "REALM",
+    # Autonómicas
+    "RED", "ANTV", "TVG", "EXTREM", "TVC", "ARAGON", "TELMIN", "ETB3", "ETB",
+)
+# Canales de reposiciones: sólo cuentan si la emisión es en directo
+CANALES_DIFERIDOS = frozenset({"REALM", "GOL"})
+_TZ_ES = ZoneInfo("Europe/Madrid")
+_REPEAT_GAP = timedelta(hours=3)
+_MADRUGADA = (3.0, 10.5)
+
+# Si con el filtro llegan menos canales que esto, los códigos han cambiado:
+# se vuelve a pedir la guía completa
+MIN_CANALES_FILTRO = 15
 
 # Margen para agrupar la misma emisión en varios canales
 _GROUP_WINDOW = timedelta(minutes=20)
@@ -105,6 +134,7 @@ class Emision:
     fin: datetime
     directo: bool
     estreno: bool
+    repeticion: bool = False
 
     @property
     def canal_dial(self) -> str:
@@ -114,7 +144,7 @@ class Emision:
     @property
     def original(self) -> bool:
         """True si es la emisión en directo/estreno (no una repetición)."""
-        return self.directo or self.estreno
+        return (self.directo or self.estreno) and not self.repeticion
 
     @property
     def es_resumen(self) -> bool:
@@ -180,7 +210,12 @@ class Partido:
             ],
             "inicio": inicio.isoformat(),
             "fin": fin.isoformat(),
+            "fecha": inicio.strftime("%d/%m/%Y"),
             "hora": inicio.strftime("%H:%M"),
+            "fecha_hora": (
+                f"{_WEEKDAYS[inicio.weekday()]} {inicio.strftime('%d/%m/%Y')} "
+                f"a las {inicio.strftime('%H:%M')}"
+            ),
             "cuando": describir_fecha(inicio, ahora_local),
             "en_juego": self.en_juego(ahora),
             "directo": any(e.original for e in self.emisiones),
@@ -202,11 +237,12 @@ def _is_football(event: dict[str, Any]) -> bool:
     return genre.startswith("futbol") and "americano" not in genre and "australiano" not in genre
 
 
-def parse_epg(raw: bytes) -> list[Emision]:
+def parse_epg(raw: bytes) -> tuple[list[Emision], int]:
     """Convierte la respuesta cruda de la EPG en emisiones de fútbol.
 
     La respuesta es una lista de canales (cada uno una lista de eventos) o,
-    si se filtra por canal, una lista plana de eventos.
+    si se filtra por canal, una lista plana de eventos. Devuelve también el
+    número de canales distintos recibidos.
     """
     data = _json_loads(raw)
     if not isinstance(data, list):
@@ -220,10 +256,12 @@ def parse_epg(raw: bytes) -> list[Emision]:
             events.append(item)
 
     result: list[Emision] = []
+    canales: set[str] = set()
     for event in events:
+        canal = event.get("Canal") or {}
+        canales.add(str(canal.get("CodCadenaTv")))
         if not _is_football(event):
             continue
-        canal = event.get("Canal") or {}
         try:
             dial = int(canal.get("ServiceId"))
             inicio = datetime.fromtimestamp(int(event["FechaHoraInicio"]) / 1000, tz=timezone.utc)
@@ -244,12 +282,16 @@ def parse_epg(raw: bytes) -> list[Emision]:
                 estreno=bool(event.get("Estreno")),
             )
         )
-    return result
+    return result, len(canales)
 
 
-async def fetch_day(session: aiohttp.ClientSession, day: date) -> bytes:
-    """Descarga la guía completa de un día (≈11 MB)."""
+async def fetch_day(
+    session: aiohttp.ClientSession, day: date, canales: tuple[str, ...] | None = None
+) -> bytes:
+    """Descarga la guía de un día: completa (≈11 MB) o sólo de `canales`."""
     params = {"from": f"{day.isoformat()}T00:00:00", **EPG_PARAMS}
+    if canales:
+        params["channel"] = ",".join(canales)
     try:
         async with session.get(
             EPG_URL,
@@ -304,6 +346,40 @@ def agrupar(emisiones: list[Emision]) -> list[Partido]:
     return partidos
 
 
+def _clave_partido(em: Emision) -> tuple[frozenset[str], str]:
+    titulo = frozenset(w for w in normalize(em.partido) if w not in _STOPWORDS)
+    return titulo, " ".join(normalize(em.competicion))
+
+
+def marcar_repeticiones(emisiones: list[Emision]) -> list[Emision]:
+    """Marca como repetición los falsos "estrenos" de la guía.
+
+    Movistar marca como estreno el primer pase de un partido en cada canal,
+    aunque sea un diferido. Se considera repetición (salvo si es en directo):
+    - si el mismo partido de la misma competición ya se emitió >3 h antes,
+    - si empieza entre las 03:00 y las 10:30 (hora peninsular),
+    - si es de un canal de reposiciones (Real Madrid TV, Replay).
+    """
+    primera: dict[tuple[frozenset[str], str], datetime] = {}
+    for em in sorted(emisiones, key=lambda e: e.inicio):
+        primera.setdefault(_clave_partido(em), em.inicio)
+
+    resultado: list[Emision] = []
+    for em in emisiones:
+        repeticion = False
+        if not em.directo:
+            local = em.inicio.astimezone(_TZ_ES)
+            hora = local.hour + local.minute / 60
+            if em.inicio - primera[_clave_partido(em)] > _REPEAT_GAP:
+                repeticion = True
+            elif em.codigo_canal in CANALES_DIFERIDOS:
+                repeticion = True
+            elif _MADRUGADA[0] <= hora < _MADRUGADA[1]:
+                repeticion = True
+        resultado.append(replace(em, repeticion=True) if repeticion else em)
+    return resultado
+
+
 def filtrar(
     emisiones: list[Emision],
     ahora: datetime,
@@ -338,7 +414,7 @@ def buscar(
     candidatas = [
         e for e in filtrar(emisiones, ahora, incluir_repeticiones) if _matches(tokens, e.palabras)
     ]
-    # Si sólo hay repeticiones, mejor eso que nada
+    # Si sólo hay repeticiones, mejor eso que nada (el texto lo indica)
     if not candidatas and not incluir_repeticiones:
         candidatas = [
             e for e in filtrar(emisiones, ahora, True) if _matches(tokens, e.palabras)
@@ -381,4 +457,6 @@ def describir_partido(partido: Partido, ahora: datetime, tz: Any = None) -> str:
         cuando = "se está emitiendo ahora"
     else:
         cuando = f"se emite {describir_fecha(inicio, ahora_local)}"
+    if not any(e.original for e in partido.emisiones):
+        cuando += " (repetición)"
     return f"{partido.partido} ({partido.competicion}) {cuando} en {canales}."

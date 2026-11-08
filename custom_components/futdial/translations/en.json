@@ -6,15 +6,17 @@
         "description": "Find out on which Movistar Plus+ channel and dial number each match is broadcast.",
         "data": {
           "equipos": "Teams to follow",
+          "intervalo": "Refresh the TV guide",
           "dias": "Days of TV guide to fetch",
-          "intervalo": "Update interval",
-          "incluir_repeticiones": "Include replays and highlights"
+          "incluir_repeticiones": "Include replays and highlights",
+          "todos_los_canales": "Search all channels"
         },
         "data_description": {
-          "equipos": "A 'Próximo partido …' sensor is created for each team. E.g. Atleti, Real Madrid, Betis",
-          "dias": "Each day is about 11 MB of TV guide data.",
-          "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
-          "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."
+          "equipos": "Pick from the list or type another one. Three sensors are created per team: channel ('M+ LALIGA - 54'), dial (54) and match date and time.",
+          "intervalo": "When refreshing every few days, enough days are downloaded to cover until the next refresh.",
+          "dias": "Including today.",
+          "incluir_repeticiones": "Otherwise only live or first-run broadcasts are shown.",
+          "todos_los_canales": "Downloads the full guide (about 11 MB per day, slower). By default only the ~65 sports, national and regional channels are queried."
         }
       }
     },
@@ -29,15 +31,17 @@
         "title": "FutDial options",
         "data": {
           "equipos": "Teams to follow",
+          "intervalo": "Refresh the TV guide",
           "dias": "Days of TV guide to fetch",
-          "intervalo": "Update interval",
-          "incluir_repeticiones": "Include replays and highlights"
+          "incluir_repeticiones": "Include replays and highlights",
+          "todos_los_canales": "Search all channels"
         },
         "data_description": {
-          "equipos": "A 'Próximo partido …' sensor is created for each team. E.g. Atleti, Real Madrid, Betis",
-          "dias": "Each day is about 11 MB of TV guide data.",
-          "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
-          "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."
+          "equipos": "Pick from the list or type another one. Three sensors are created per team: channel ('M+ LALIGA - 54'), dial (54) and match date and time.",
+          "intervalo": "When refreshing every few days, enough days are downloaded to cover until the next refresh.",
+          "dias": "Including today.",
+          "incluir_repeticiones": "Otherwise only live or first-run broadcasts are shown.",
+          "todos_los_canales": "Downloads the full guide (about 11 MB per day, slower). By default only the ~65 sports, national and regional channels are queried."
         }
       }
     }
@@ -45,6 +49,9 @@
   "exceptions": {
     "not_loaded": {
       "message": "FutDial is not set up or is still loading."
+    },
+    "no_data": {
+      "message": "The Movistar Plus+ TV guide could not be downloaded yet. Try again in a few minutes."
     }
   },
   "services": {

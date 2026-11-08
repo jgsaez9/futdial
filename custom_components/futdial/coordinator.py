@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -17,15 +18,32 @@ from .const import (
     CONF_DIAS,
     CONF_INTERVALO,
     CONF_REPETICIONES,
+    CONF_TODOS_CANALES,
     DEFAULT_DIAS,
     DEFAULT_INTERVALO,
     DEFAULT_REPETICIONES,
     DOMAIN,
     FAR_DAYS_MAX_AGE,
+    MAX_DIAS,
+    RETRY_INTERVAL,
 )
-from .epg import Emision, EpgError, Partido, buscar, fetch_day, parse_epg
+from .epg import (
+    CANALES_FUTBOL,
+    MIN_CANALES_FILTRO,
+    Emision,
+    EpgError,
+    Partido,
+    buscar,
+    fetch_day,
+    marcar_repeticiones,
+    parse_epg,
+)
+from .teams import buscar_equipo, resolver_equipo
 
 _LOGGER = logging.getLogger(__name__)
+
+# Descargas simultáneas (cada una es un día de guía)
+_PARALLEL = 3
 
 
 @dataclass
@@ -40,10 +58,17 @@ class RuntimeData:
 
     coordinator: FutDialCoordinator
     consulta: str = ""
-    extra: dict[str, Any] = field(default_factory=dict)
 
 
 type FutDialConfigEntry = ConfigEntry[RuntimeData]
+
+
+def intervalo_minutos(options: dict) -> int:
+    """Intervalo configurado en minutos (acepta valores antiguos numéricos)."""
+    try:
+        return max(30, int(float(options.get(CONF_INTERVALO, DEFAULT_INTERVALO))))
+    except (TypeError, ValueError):
+        return int(DEFAULT_INTERVALO)
 
 
 class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
@@ -52,42 +77,78 @@ class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
     config_entry: FutDialConfigEntry
 
     def __init__(self, hass: HomeAssistant, entry: FutDialConfigEntry) -> None:
+        minutos = intervalo_minutos(entry.options)
+        self._intervalo = timedelta(minutes=minutos)
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
-            update_interval=timedelta(
-                minutes=int(entry.options.get(CONF_INTERVALO, DEFAULT_INTERVALO))
-            ),
+            update_interval=self._intervalo,
         )
-        self.dias = int(entry.options.get(CONF_DIAS, DEFAULT_DIAS))
+        dias = int(entry.options.get(CONF_DIAS, DEFAULT_DIAS))
+        # Si se actualiza cada X días, hay que descargar al menos X+1 días
+        # para que no se quede sin programación entre actualizaciones
+        self.dias = min(MAX_DIAS, max(dias, math.ceil(minutos / 1440) + 1))
         self.incluir_repeticiones = bool(
             entry.options.get(CONF_REPETICIONES, DEFAULT_REPETICIONES)
         )
+        self.canales: tuple[str, ...] | None = (
+            None if entry.options.get(CONF_TODOS_CANALES) else CANALES_FUTBOL
+        )
         self._cache: dict[date, _DayCache] = {}
         self._session = async_get_clientsession(hass)
+        self._sem = asyncio.Semaphore(_PARALLEL)
+
+    async def _fetch_parse(self, day: date) -> list[Emision]:
+        async with self._sem:
+            raw = await fetch_day(self._session, day, self.canales)
+            emisiones, n_canales = await self.hass.async_add_executor_job(parse_epg, raw)
+            del raw
+            # Pocos canales => Movistar ha cambiado los códigos: guía completa.
+            # Cero canales en días futuros => simplemente aún no hay guía.
+            if (
+                self.canales
+                and n_canales < MIN_CANALES_FILTRO
+                and (n_canales > 0 or day <= dt_util.now().date())
+            ):
+                _LOGGER.warning(
+                    "La guía filtrada de %s sólo trae %d canales; "
+                    "se descarga la guía completa", day, n_canales
+                )
+                raw = await fetch_day(self._session, day, None)
+                emisiones, _ = await self.hass.async_add_executor_job(parse_epg, raw)
+                del raw
+            return emisiones
 
     async def _async_update_data(self) -> list[Emision]:
         now = dt_util.now()
         today = now.date()
         days = [today + timedelta(days=i) for i in range(self.dias)]
-        errors: list[str] = []
 
-        for i, day in enumerate(days):
-            cached = self._cache.get(day)
-            # Hoy y mañana siempre; los siguientes, cada FAR_DAYS_MAX_AGE
-            if cached and i >= 2 and now - cached.fetched < FAR_DAYS_MAX_AGE:
-                continue
-            try:
-                raw = await fetch_day(self._session, day)
-                emisiones = await self.hass.async_add_executor_job(parse_epg, raw)
-                del raw
-            except EpgError as err:
-                errors.append(str(err))
-                _LOGGER.warning("%s", err)
-                continue
-            self._cache[day] = _DayCache(now, emisiones)
+        # Hoy y mañana siempre; los siguientes, como mucho cada FAR_DAYS_MAX_AGE
+        pendientes = [
+            day
+            for i, day in enumerate(days)
+            if not (
+                (cached := self._cache.get(day))
+                and i >= 2
+                and now - cached.fetched < FAR_DAYS_MAX_AGE
+            )
+        ]
+        resultados = await asyncio.gather(
+            *(self._fetch_parse(day) for day in pendientes), return_exceptions=True
+        )
+        errores: list[str] = []
+        for day, res in zip(pendientes, resultados, strict=True):
+            if isinstance(res, EpgError):
+                errores.append(str(res))
+                _LOGGER.warning("%s", res)
+            elif isinstance(res, BaseException):
+                errores.append(f"{day}: {res!r}")
+                _LOGGER.exception("Error inesperado procesando la guía de %s", day, exc_info=res)
+            else:
+                self._cache[day] = _DayCache(now, res)
 
         # Descarta días pasados (salvo ayer, por partidos que cruzan medianoche)
         for day in list(self._cache):
@@ -95,7 +156,10 @@ class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
                 del self._cache[day]
 
         if not self._cache:
-            raise UpdateFailed("; ".join(errors) or "No se pudo descargar la EPG")
+            # Sin datos: reintenta pronto en lugar de esperar al intervalo
+            self.update_interval = RETRY_INTERVAL
+            raise UpdateFailed("; ".join(errores) or "No se pudo descargar la guía")
+        self.update_interval = self._intervalo
 
         seen: set[int] = set()
         result: list[Emision] = []
@@ -105,12 +169,19 @@ class FutDialCoordinator(DataUpdateCoordinator[list[Emision]]):
                 if key not in seen:
                     seen.add(key)
                     result.append(em)
+        result = marcar_repeticiones(result)
         result.sort(key=lambda e: (e.inicio, e.dial))
-        _LOGGER.debug("EPG actualizada: %d emisiones de fútbol", len(result))
+        _LOGGER.debug(
+            "Guía actualizada: %d emisiones de fútbol en %d días", len(result), len(self._cache)
+        )
         return result
 
-    def buscar(self, consulta: str, incluir_repeticiones: bool | None = None) -> list[Partido]:
-        """Busca un partido en los datos ya descargados."""
+    def partidos(self, consulta: str, incluir_repeticiones: bool | None = None) -> list[Partido]:
+        """Partidos para un equipo del catálogo o un texto libre."""
         if incluir_repeticiones is None:
             incluir_repeticiones = self.incluir_repeticiones
-        return buscar(self.data or [], consulta, dt_util.utcnow(), incluir_repeticiones)
+        ahora = dt_util.utcnow()
+        datos = self.data or []
+        if equipo := resolver_equipo(consulta):
+            return buscar_equipo(datos, equipo, ahora, incluir_repeticiones)
+        return buscar(datos, consulta, ahora, incluir_repeticiones)

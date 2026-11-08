@@ -15,7 +15,7 @@ from homeassistant.core import (
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.typing import ConfigType
@@ -31,6 +31,7 @@ from .const import (
     SIGNAL_QUERY_UPDATED,
 )
 from .coordinator import FutDialConfigEntry, FutDialCoordinator, RuntimeData
+from .teams import resolver_equipo
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TEXT]
 
@@ -68,18 +69,26 @@ def resultado_busqueda(
 ) -> dict[str, Any]:
     """Resultado de búsqueda serializable (servicio, sensor e intent)."""
     coordinator = entry.runtime_data.coordinator
-    partidos = coordinator.buscar(consulta, incluir_repeticiones)
+    partidos = coordinator.partidos(consulta, incluir_repeticiones)
     ahora = dt_util.utcnow()
     tz = dt_util.get_default_time_zone()
     items = [p.as_dict(ahora, tz) for p in partidos[:max_resultados]]
-    primero = items[0] if items else None
+    primero = items[0] if items else {}
+    equipo = resolver_equipo(consulta)
+    nombre = equipo.nombre if equipo else consulta
     return {
         "consulta": consulta,
-        "encontrado": primero is not None,
-        "resultado": primero["canal_dial"] if primero else None,
-        "canal": primero["canal"] if primero else None,
-        "dial": primero["dial"] if primero else None,
-        "texto": primero["texto"] if primero else f"No he encontrado ningún partido de «{consulta}» en Movistar Plus+.",
+        "equipo": nombre,
+        "encontrado": bool(primero),
+        "resultado": primero.get("canal_dial"),
+        "canal": primero.get("canal"),
+        "dial": primero.get("dial"),
+        "inicio": primero.get("inicio"),
+        "fecha": primero.get("fecha"),
+        "hora": primero.get("hora"),
+        "fecha_hora": primero.get("fecha_hora"),
+        "texto": primero.get("texto")
+        or f"No he encontrado ningún partido de «{nombre}» en Movistar Plus+.",
         "partidos": items,
     }
 
@@ -90,8 +99,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def _buscar(call: ServiceCall) -> ServiceResponse:
         entry = get_entry(hass)
         consulta: str = call.data[ATTR_PARTIDO].strip()
-        if not entry.runtime_data.coordinator.data:
-            await entry.runtime_data.coordinator.async_request_refresh()
+        coordinator = entry.runtime_data.coordinator
+        if coordinator.data is None:
+            # Primera descarga aún en curso o fallida: se intenta ahora
+            await coordinator.async_refresh()
+            if coordinator.data is None:
+                raise HomeAssistantError(
+                    "La programación de Movistar Plus+ todavía no se ha podido descargar",
+                    translation_domain=DOMAIN,
+                    translation_key="no_data",
+                )
         result = resultado_busqueda(
             hass,
             entry,
@@ -129,9 +146,14 @@ def set_query(hass: HomeAssistant, entry: FutDialConfigEntry, consulta: str) -> 
 async def async_setup_entry(hass: HomeAssistant, entry: FutDialConfigEntry) -> bool:
     """Configura la integración desde una entrada de configuración."""
     coordinator = FutDialCoordinator(hass, entry)
-    await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = RuntimeData(coordinator=coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # La guía tarda en descargarse: no se bloquea la configuración (ni el
+    # arranque de Home Assistant) esperando a ella. Las entidades se
+    # actualizan solas cuando llegan los datos.
+    entry.async_create_background_task(
+        hass, coordinator.async_refresh(), f"{DOMAIN}_primera_descarga"
+    )
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     return True
 

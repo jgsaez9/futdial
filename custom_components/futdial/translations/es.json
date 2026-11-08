@@ -6,15 +6,17 @@
         "description": "Consulta en qué canal y dial de Movistar Plus+ se emite cada partido.",
         "data": {
           "equipos": "Equipos a seguir",
+          "intervalo": "Actualizar la programación",
           "dias": "Días de programación a consultar",
-          "intervalo": "Intervalo de actualización",
-          "incluir_repeticiones": "Incluir repeticiones y resúmenes"
+          "incluir_repeticiones": "Incluir repeticiones y resúmenes",
+          "todos_los_canales": "Buscar en todos los canales"
         },
         "data_description": {
-          "equipos": "Se crea un sensor «Próximo partido …» por cada equipo. Ej.: Atleti, Real Madrid, Betis",
-          "dias": "Cada día son unos 11 MB de guía.",
-          "intervalo": "Minutos entre descargas de la guía de hoy y mañana.",
-          "incluir_repeticiones": "Si no, sólo se muestran emisiones en directo/estreno."
+          "equipos": "Elige de la lista o escribe otro. Por cada equipo se crean tres sensores: canal («M+ LALIGA - 54»), dial (54) y fecha y hora del partido.",
+          "intervalo": "Si eliges cada varios días, se descarga la programación de los días necesarios para cubrir hasta la siguiente actualización.",
+          "dias": "Hoy incluido.",
+          "incluir_repeticiones": "Si no, sólo se muestran las emisiones en directo o de estreno.",
+          "todos_los_canales": "Descarga la guía completa (unos 11 MB por día, más lenta). Por defecto sólo se consultan los ~65 canales de deportes, generalistas y autonómicos."
         }
       }
     },
@@ -29,15 +31,17 @@
         "title": "Opciones de FutDial",
         "data": {
           "equipos": "Equipos a seguir",
+          "intervalo": "Actualizar la programación",
           "dias": "Días de programación a consultar",
-          "intervalo": "Intervalo de actualización",
-          "incluir_repeticiones": "Incluir repeticiones y resúmenes"
+          "incluir_repeticiones": "Incluir repeticiones y resúmenes",
+          "todos_los_canales": "Buscar en todos los canales"
         },
         "data_description": {
-          "equipos": "Se crea un sensor «Próximo partido …» por cada equipo. Ej.: Atleti, Real Madrid, Betis",
-          "dias": "Cada día son unos 11 MB de guía.",
-          "intervalo": "Minutos entre descargas de la guía de hoy y mañana.",
-          "incluir_repeticiones": "Si no, sólo se muestran emisiones en directo/estreno."
+          "equipos": "Elige de la lista o escribe otro. Por cada equipo se crean tres sensores: canal («M+ LALIGA - 54»), dial (54) y fecha y hora del partido.",
+          "intervalo": "Si eliges cada varios días, se descarga la programación de los días necesarios para cubrir hasta la siguiente actualización.",
+          "dias": "Hoy incluido.",
+          "incluir_repeticiones": "Si no, sólo se muestran las emisiones en directo o de estreno.",
+          "todos_los_canales": "Descarga la guía completa (unos 11 MB por día, más lenta). Por defecto sólo se consultan los ~65 canales de deportes, generalistas y autonómicos."
         }
       }
     }
@@ -45,6 +49,9 @@
   "exceptions": {
     "not_loaded": {
       "message": "FutDial no está configurado o todavía se está cargando."
+    },
+    "no_data": {
+      "message": "La programación de Movistar Plus+ todavía no se ha podido descargar. Inténtalo en unos minutos."
     }
   },
   "services": {
