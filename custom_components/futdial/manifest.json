@@ -1,6 +1,7 @@
 {
   "domain": "futdial",
   "name": "FutDial",
+  "categories": ["media_entertainment.tv_streaming"],
   "codeowners": ["@jgsaez9"],
   "config_flow": true,
   "dependencies": [],
