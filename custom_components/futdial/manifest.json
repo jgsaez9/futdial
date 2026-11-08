@@ -1,0 +1,14 @@
+{
+  "domain": "futdial",
+  "name": "FutDial",
+  "codeowners": ["@jgsaez9"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/jgsaez9/futdial",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/jgsaez9/futdial/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

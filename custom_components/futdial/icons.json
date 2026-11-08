@@ -1,0 +1,10 @@
+{
+  "services": {
+    "buscar_partido": {
+      "service": "mdi:soccer"
+    },
+    "actualizar": {
+      "service": "mdi:refresh"
+    }
+  }
+}

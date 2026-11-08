@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "FutDial",
+        "description": "Find out on which Movistar Plus+ channel and dial number each match is broadcast.",
+        "data": {
+          "equipos": "Teams to follow",
+          "dias": "Days of TV guide to fetch",
+          "intervalo": "Update interval",
+          "incluir_repeticiones": "Include replays and highlights"
+        },
+        "data_description": {
+          "equipos": "A 'Próximo partido <team>' sensor is created for each one. E.g. Atleti, Real Madrid, Betis",
+          "dias": "Each day is about 11 MB of TV guide data.",
+          "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
+          "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Already configured.",
+      "single_instance_allowed": "Only a single instance is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "FutDial options",
+        "data": {
+          "equipos": "Teams to follow",
+          "dias": "Days of TV guide to fetch",
+          "intervalo": "Update interval",
+          "incluir_repeticiones": "Include replays and highlights"
+        },
+        "data_description": {
+          "equipos": "A 'Próximo partido <team>' sensor is created for each one. E.g. Atleti, Real Madrid, Betis",
+          "dias": "Each day is about 11 MB of TV guide data.",
+          "intervalo": "Minutes between downloads of today's and tomorrow's guide.",
+          "incluir_repeticiones": "Otherwise only live/first-run broadcasts are shown."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_loaded": {
+      "message": "FutDial is not set up or is still loading."
+    }
+  },
+  "services": {
+    "buscar_partido": {
+      "name": "Find match",
+      "description": "Finds the Movistar Plus+ channel and dial for a match. Returns e.g. 'M+ LALIGA - 54'.",
+      "fields": {
+        "partido": {
+          "name": "Match or team",
+          "description": "One or two teams, or the competition. E.g. 'Atleti Barça', 'Betis'."
+        },
+        "incluir_repeticiones": {
+          "name": "Include replays and highlights",
+          "description": "Also search replays and highlights."
+        },
+        "max_resultados": {
+          "name": "Max results",
+          "description": "Maximum number of matches returned."
+        }
+      }
+    },
+    "actualizar": {
+      "name": "Refresh guide",
+      "description": "Re-downloads the Movistar Plus+ TV guide now."
+    }
+  }
+}

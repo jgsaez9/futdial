@@ -1,0 +1,22 @@
+buscar_partido:
+  fields:
+    partido:
+      required: true
+      example: "Atlético Barcelona"
+      selector:
+        text:
+    incluir_repeticiones:
+      required: false
+      default: false
+      selector:
+        boolean:
+    max_resultados:
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+
+actualizar:
