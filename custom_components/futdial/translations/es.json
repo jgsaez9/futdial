@@ -29,6 +29,13 @@
     "step": {
       "init": {
         "title": "Opciones de FutDial",
+        "menu_options": {
+          "general": "General: equipos, actualización y canales",
+          "mando": "Mando: poner el partido en la tele"
+        }
+      },
+      "general": {
+        "title": "General",
         "data": {
           "equipos": "Equipos a seguir",
           "intervalo": "Actualizar la programación",
@@ -43,7 +50,57 @@
           "incluir_repeticiones": "Si no, sólo se muestran las emisiones en directo o de estreno.",
           "todos_los_canales": "Descarga la guía completa (unos 11 MB por día, más lenta). Por defecto sólo se consultan los ~65 canales de deportes, generalistas y autonómicos."
         }
+      },
+      "mando": {
+        "title": "Mando del descodificador",
+        "description": "FutDial puede marcar el dial en tu descodificador de Movistar Plus+ usando una entidad «remote» (Broadlink, Android TV…). Deja el mando vacío para desactivarlo.",
+        "data": {
+          "mando": "Mando",
+          "modo_mando": "Cómo se envían los números",
+          "retardo": "Pausa entre dígitos"
+        },
+        "data_description": {
+          "mando": "Entidad remote que controla el descodificador, p. ej. remote.rm_mini_3.",
+          "retardo": "Si el descodificador se salta dígitos, auméntala."
+        }
+      },
+      "codigos": {
+        "title": "Códigos IR de cada dígito",
+        "description": "Pega el código de cada tecla tal y como lo usas en remote.send_command (con o sin «b64:»). Sólo hacen falta los dígitos de los diales que vayas a usar.",
+        "data": {
+          "codigo_0": "Tecla 0",
+          "codigo_1": "Tecla 1",
+          "codigo_2": "Tecla 2",
+          "codigo_3": "Tecla 3",
+          "codigo_4": "Tecla 4",
+          "codigo_5": "Tecla 5",
+          "codigo_6": "Tecla 6",
+          "codigo_7": "Tecla 7",
+          "codigo_8": "Tecla 8",
+          "codigo_9": "Tecla 9",
+          "tecla_final": "Tecla final (opcional)"
+        },
+        "data_description": {
+          "tecla_final": "Código que se envía después del número, p. ej. OK. Normalmente no hace falta."
+        }
+      },
+      "plantilla": {
+        "title": "Plantilla de comando",
+        "description": "Cada dígito se envía como un comando: {digito} se sustituye por el número.",
+        "data": {
+          "plantilla": "Plantilla",
+          "dispositivo": "Dispositivo (opcional)",
+          "tecla_final": "Comando final (opcional)"
+        },
+        "data_description": {
+          "plantilla": "Ejemplos: «{digito}» para comandos aprendidos en Broadlink llamados 0…9, o «KEYCODE_{digito}» para Android TV.",
+          "dispositivo": "Nombre del dispositivo con el que aprendiste los comandos en Broadlink (p. ej. movistar)."
+        }
       }
+    },
+    "error": {
+      "codigo_invalido": "No parece un código válido en base64.",
+      "plantilla_invalida": "La plantilla tiene que contener {digito}."
     }
   },
   "exceptions": {
@@ -52,6 +109,15 @@
     },
     "no_data": {
       "message": "La programación de Movistar Plus+ todavía no se ha podido descargar. Inténtalo en unos minutos."
+    },
+    "falta_codigo": {
+      "message": "Falta el código IR del dígito {digitos} para marcar el {dial}. Añádelo en FutDial → Configurar → Mando."
+    },
+    "sin_mando": {
+      "message": "No hay ningún mando configurado. Elígelo en FutDial → Configurar → Mando."
+    },
+    "sin_partido": {
+      "message": "No he encontrado ningún partido de «{equipo}» en Movistar Plus+."
     }
   },
   "services": {
@@ -76,6 +142,24 @@
     "actualizar": {
       "name": "Actualizar guía",
       "description": "Vuelve a descargar ahora la programación de Movistar Plus+."
+    },
+    "sintonizar": {
+      "name": "Poner partido",
+      "description": "Pone en el descodificador el canal donde se emite un partido (o un dial concreto) usando el mando configurado.",
+      "fields": {
+        "partido": {
+          "name": "Partido o equipo",
+          "description": "Equipo, apodo o partido. Ej.: «Atleti», «Betis Sevilla»."
+        },
+        "dial": {
+          "name": "Dial",
+          "description": "Número de canal a marcar directamente, en lugar de buscar un partido."
+        },
+        "mando": {
+          "name": "Mando",
+          "description": "Entidad remote a usar en lugar de la configurada."
+        }
+      }
     }
   }
 }

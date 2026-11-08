@@ -24,18 +24,22 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ATTR_DIAL,
     ATTR_MAX_RESULTADOS,
     ATTR_PARTIDO,
+    CONF_MANDO,
     CONF_REPETICIONES,
     DOMAIN,
     SERVICE_ACTUALIZAR,
     SERVICE_BUSCAR,
+    SERVICE_SINTONIZAR,
     SIGNAL_QUERY_UPDATED,
 )
 from .coordinator import FutDialConfigEntry, FutDialCoordinator, RuntimeData
+from .mando import async_sintonizar
 from .teams import resolver_equipo
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.TEXT]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.SENSOR, Platform.TEXT]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -47,6 +51,18 @@ BUSCAR_SCHEMA = vol.Schema(
             vol.Coerce(int), vol.Range(min=1, max=50)
         ),
     }
+)
+
+
+SINTONIZAR_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Exclusive(ATTR_PARTIDO, "que"): cv.string,
+            vol.Exclusive(ATTR_DIAL, "que"): vol.All(vol.Coerce(int), vol.Range(min=0, max=9999)),
+            vol.Optional(CONF_MANDO): cv.entity_id,
+        }
+    ),
+    cv.has_at_least_one_key(ATTR_PARTIDO, ATTR_DIAL),
 )
 
 
@@ -95,6 +111,43 @@ def resultado_busqueda(
     }
 
 
+async def sintonizar_partido(
+    hass: HomeAssistant,
+    entry: FutDialConfigEntry,
+    consulta: str | None = None,
+    dial: int | None = None,
+    mando: str | None = None,
+) -> dict[str, Any]:
+    """Pone en la tele el partido buscado (o un dial concreto).
+
+    Devuelve el resultado de la búsqueda más lo enviado al mando, con un
+    `texto` listo para el asistente de voz.
+    """
+    if dial is not None:
+        enviado = await async_sintonizar(hass, dict(entry.options), dial, mando)
+        return {**enviado, "texto": f"Pongo el dial {dial}.", "encontrado": True}
+
+    coordinator = entry.runtime_data.coordinator
+    if coordinator.data is None:
+        await coordinator.async_refresh()
+    r = resultado_busqueda(hass, entry, consulta or "", max_resultados=1)
+    if not r["encontrado"]:
+        raise ServiceValidationError(
+            r["texto"],
+            translation_domain=DOMAIN,
+            translation_key="sin_partido",
+            translation_placeholders={"equipo": r["equipo"]},
+        )
+    p = r["partidos"][0]
+    enviado = await async_sintonizar(hass, dict(entry.options), p["dial"], mando)
+    cuando = "" if p["en_juego"] else f" (empieza {p['cuando']})"
+    return {
+        **r,
+        **enviado,
+        "texto": f"Pongo {p['partido']} en {p['canal']}, dial {p['dial']}{cuando}.",
+    }
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Registra los servicios de la integración."""
 
@@ -135,6 +188,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         supports_response=SupportsResponse.OPTIONAL,
     )
     hass.services.async_register(DOMAIN, SERVICE_ACTUALIZAR, _actualizar)
+
+    async def _sintonizar(call: ServiceCall) -> ServiceResponse:
+        result = await sintonizar_partido(
+            hass,
+            get_entry(hass),
+            call.data.get(ATTR_PARTIDO),
+            call.data.get(ATTR_DIAL),
+            call.data.get(CONF_MANDO),
+        )
+        return result if call.return_response else None
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SINTONIZAR,
+        _sintonizar,
+        schema=SINTONIZAR_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     return True
 
 

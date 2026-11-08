@@ -20,3 +20,21 @@ buscar_partido:
           mode: box
 
 actualizar:
+
+sintonizar:
+  fields:
+    partido:
+      example: "Atleti"
+      selector:
+        text:
+    dial:
+      example: 54
+      selector:
+        number:
+          min: 0
+          max: 9999
+          mode: box
+    mando:
+      selector:
+        entity:
+          domain: remote

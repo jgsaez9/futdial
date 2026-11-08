@@ -13,6 +13,19 @@ CONF_INTERVALO = "intervalo"
 CONF_REPETICIONES = "incluir_repeticiones"
 CONF_TODOS_CANALES = "todos_los_canales"
 
+# Mando / descodificador
+CONF_MANDO = "mando"
+CONF_MODO_MANDO = "modo_mando"
+CONF_PLANTILLA = "plantilla"
+CONF_DISPOSITIVO = "dispositivo"
+CONF_RETARDO = "retardo"
+CONF_TECLA_FINAL = "tecla_final"
+CONF_CODIGOS = [f"codigo_{d}" for d in range(10)]
+MODO_CODIGOS = "codigos"
+MODO_PLANTILLA = "plantilla"
+DEFAULT_RETARDO = 0.9
+DEFAULT_PLANTILLA = "{digito}"
+
 DEFAULT_DIAS = 3
 DEFAULT_INTERVALO = "180"  # minutos
 DEFAULT_REPETICIONES = False
@@ -47,7 +60,10 @@ SIGNAL_QUERY_UPDATED = f"{DOMAIN}_query_updated"
 
 SERVICE_BUSCAR = "buscar_partido"
 SERVICE_ACTUALIZAR = "actualizar"
+SERVICE_SINTONIZAR = "sintonizar"
 ATTR_PARTIDO = "partido"
+ATTR_DIAL = "dial"
 ATTR_MAX_RESULTADOS = "max_resultados"
 
 INTENT_BUSCAR = "FutDialBuscarPartido"
+INTENT_SINTONIZAR = "FutDialSintonizar"

@@ -29,6 +29,13 @@
     "step": {
       "init": {
         "title": "FutDial options",
+        "menu_options": {
+          "general": "General: teams, refresh and channels",
+          "mando": "Remote: put the match on TV"
+        }
+      },
+      "general": {
+        "title": "General",
         "data": {
           "equipos": "Teams to follow",
           "intervalo": "Refresh the TV guide",
@@ -43,7 +50,57 @@
           "incluir_repeticiones": "Otherwise only live or first-run broadcasts are shown.",
           "todos_los_canales": "Downloads the full guide (about 11 MB per day, slower). By default only the ~65 sports, national and regional channels are queried."
         }
+      },
+      "mando": {
+        "title": "Set-top box remote",
+        "description": "FutDial can dial the channel on your Movistar Plus+ set-top box through a remote entity (Broadlink, Android TV…). Leave the remote empty to disable it.",
+        "data": {
+          "mando": "Remote",
+          "modo_mando": "How digits are sent",
+          "retardo": "Pause between digits"
+        },
+        "data_description": {
+          "mando": "Remote entity that controls the set-top box, e.g. remote.rm_mini_3.",
+          "retardo": "Increase it if the box misses digits."
+        }
+      },
+      "codigos": {
+        "title": "IR code for each digit",
+        "description": "Paste each key code exactly as you use it in remote.send_command (with or without 'b64:'). Only the digits of the dials you use are needed.",
+        "data": {
+          "codigo_0": "Key 0",
+          "codigo_1": "Key 1",
+          "codigo_2": "Key 2",
+          "codigo_3": "Key 3",
+          "codigo_4": "Key 4",
+          "codigo_5": "Key 5",
+          "codigo_6": "Key 6",
+          "codigo_7": "Key 7",
+          "codigo_8": "Key 8",
+          "codigo_9": "Key 9",
+          "tecla_final": "Final key (optional)"
+        },
+        "data_description": {
+          "tecla_final": "Code sent after the number, e.g. OK. Usually not needed."
+        }
+      },
+      "plantilla": {
+        "title": "Command template",
+        "description": "Each digit is sent as one command: {digito} is replaced by the number.",
+        "data": {
+          "plantilla": "Template",
+          "dispositivo": "Device (optional)",
+          "tecla_final": "Final command (optional)"
+        },
+        "data_description": {
+          "plantilla": "Examples: '{digito}' for Broadlink learned commands named 0…9, or 'KEYCODE_{digito}' for Android TV.",
+          "dispositivo": "Device name used when learning the commands in Broadlink (e.g. movistar)."
+        }
       }
+    },
+    "error": {
+      "codigo_invalido": "This does not look like a valid base64 code.",
+      "plantilla_invalida": "The template must contain {digito}."
     }
   },
   "exceptions": {
@@ -52,6 +109,15 @@
     },
     "no_data": {
       "message": "The Movistar Plus+ TV guide could not be downloaded yet. Try again in a few minutes."
+    },
+    "falta_codigo": {
+      "message": "The IR code for digit {digitos} is missing to dial {dial}. Add it in FutDial → Configure → Remote."
+    },
+    "sin_mando": {
+      "message": "No remote is configured. Choose it in FutDial → Configure → Remote."
+    },
+    "sin_partido": {
+      "message": "No match found for '{equipo}' on Movistar Plus+."
     }
   },
   "services": {
@@ -76,6 +142,24 @@
     "actualizar": {
       "name": "Refresh guide",
       "description": "Re-downloads the Movistar Plus+ TV guide now."
+    },
+    "sintonizar": {
+      "name": "Put match on TV",
+      "description": "Tunes the set-top box to the channel of a match (or a given dial) using the configured remote.",
+      "fields": {
+        "partido": {
+          "name": "Match or team",
+          "description": "Team, nickname or match. E.g. 'Atleti'."
+        },
+        "dial": {
+          "name": "Dial",
+          "description": "Channel number to dial directly instead of searching a match."
+        },
+        "mando": {
+          "name": "Remote",
+          "description": "Remote entity to use instead of the configured one."
+        }
+      }
     }
   }
 }

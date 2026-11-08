@@ -154,6 +154,32 @@ entities:
     secondary_info: last-changed
 ```
 
+## Poner el partido en la tele
+
+FutDial puede marcar el dial en el descodificador de Movistar Plus+ usando cualquier entidad `remote` de Home Assistant (Broadlink RM mini/RM4, Android TV Remote…).
+
+1. **Ajustes → Dispositivos y servicios → FutDial → Configurar → Mando**.
+2. Elige la entidad del mando (p. ej. `remote.rm_mini_3`), la pausa entre dígitos y cómo se envían los números:
+   - **Códigos IR por dígito**: pega el código de cada tecla del 0 al 9, tal cual lo usas en `remote.send_command` (con o sin `b64:`). Sólo hacen falta los dígitos de los diales que vayas a usar.
+   - **Plantilla de comando**: `{digito}` se sustituye por cada número. Por ejemplo `{digito}` con dispositivo `movistar` para comandos aprendidos en Broadlink llamados `0`…`9`, o `KEYCODE_{digito}` para Android TV.
+
+Con el mando configurado tendrás:
+
+| | |
+| --- | --- |
+| `button.futdial_poner_partido_<equipo>` | Un botón por equipo seguido: pone el canal de su próximo partido. |
+| `button.futdial_poner_resultado_busqueda` | Pone el canal de lo que hayas escrito en «Buscar partido». |
+| `futdial.sintonizar` | Acción con `partido: Atleti` o `dial: 54`. |
+| Voz | «Pon el partido del Atleti» → «Pongo Atlético de Madrid - FC Barcelona en M+ LALIGA, dial 54». |
+
+```yaml
+action: futdial.sintonizar
+data:
+  partido: Atleti
+```
+
+Si el descodificador se salta dígitos, sube la pausa. Si al marcar un dial con dos dígitos iguales (p. ej. `55` o `11`) sólo cambia con uno, súbela también: algunos descodificadores toman dos pulsaciones idénticas muy seguidas como una sola tecla mantenida.
+
 ## Asistente de voz (Assist)
 
 Copia [`custom_sentences/es/futdial.yaml`](custom_sentences/es/futdial.yaml) a `/config/custom_sentences/es/futdial.yaml` y reinicia. Después podrás preguntar:
@@ -161,6 +187,7 @@ Copia [`custom_sentences/es/futdial.yaml`](custom_sentences/es/futdial.yaml) a `
 - «¿En qué canal echan el Atleti?»
 - «¿Dónde ponen el Betis Sevilla?»
 - «¿Qué dial es el partido del Barça?»
+- «Pon el partido del Atleti» / «Sintoniza el Betis» (con el mando configurado)
 
 Si usas un agente de conversación con LLM, el intent `FutDialBuscarPartido` también queda disponible como herramienta.
 

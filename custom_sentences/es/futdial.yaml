@@ -1,8 +1,9 @@
 # Copia este fichero a /config/custom_sentences/es/futdial.yaml
-# y reinicia Home Assistant para poder preguntar a Assist:
+# y reinicia Home Assistant para poder decirle a Assist:
 #   "¿En qué canal echan el Atleti?"
 #   "¿Dónde ponen el Betis Sevilla?"
-#   "¿Qué dial es el partido del Barça?"
+#   "Pon el partido del Atleti"          (necesita el mando configurado)
+#   "Sintoniza el Real Madrid"
 language: "es"
 intents:
   FutDialBuscarPartido:
@@ -11,6 +12,12 @@ intents:
           - "[en] (qué|que) (canal|dial) (echan|ponen|dan|emiten|televisan|retransmiten|juega|es|va) [el|la] [partido] [del|de|de la|al] {partido}"
           - "(dónde|donde) (echan|ponen|dan|emiten|televisan|retransmiten|juega|veo|puedo ver) [el|la|al] [partido] [del|de|de la] {partido}"
           - "(canal|dial) [del|de|de la] [partido] [del|de|de la] {partido}"
+  FutDialSintonizar:
+    data:
+      - sentences:
+          - "(pon|ponme|pónme|poner) [el|la] partido [del|de|de la] {partido}"
+          - "quiero ver [el|la] partido [del|de|de la] {partido}"
+          - "sintoniza [el|la|al] [partido] [del|de|de la] {partido}"
 lists:
   partido:
     wildcard: true
