@@ -30,6 +30,14 @@ DEFAULT_RETARDO = 0.9
 CONF_AUTO_EQUIPOS = "auto_equipos"
 CONF_AUTO_MINUTOS = "auto_minutos"
 DEFAULT_AUTO_MINUTOS = 30
+CONF_AUTO_NOTIFICAR = "auto_notificar"  # dispositivos de la app (device_id)
+CONF_AUTO_TITULO = "auto_titulo"
+CONF_AUTO_MENSAJE = "auto_mensaje"
+DEFAULT_AUTO_TITULO = "📺 {{ local }} - {{ visitante }}"
+DEFAULT_AUTO_MENSAJE = (
+    "He cambiado al {{ canal_dial }} para el {{ local }} - {{ visitante }}, "
+    "que empieza a las {{ hora }}."
+)
 DEFAULT_PLANTILLA = "{digito}"
 
 DEFAULT_DIAS = 3

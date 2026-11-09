@@ -100,20 +100,27 @@
       },
       "auto": {
         "title": "Poner partidos automáticamente",
-        "description": "Elige los equipos en orden de preferencia: el primero manda. Si dos partidos coinciden se pone el del equipo con más preferencia (y si empieza mientras se ve el otro, se cambia de canal). Para cambiar el orden, quita los equipos y vuelve a añadirlos en el orden que quieras. Puedes pausarlo cuando quieras con el interruptor «Poner partidos automáticamente».",
+        "description": "Elige los equipos en orden de preferencia: el primero manda. Si dos partidos coinciden se pone el del equipo con más preferencia (y si empieza mientras se ve el otro, se cambia de canal). Para cambiar el orden, quita los equipos y vuelve a añadirlos en el orden que quieras. Puedes pausarlo cuando quieras con el interruptor «Poner partidos automáticamente». Si quieres, recibe una notificación push en tus móviles o tablets (app de Home Assistant) cada vez que se cambie de canal. En las plantillas puedes usar: {variables}.",
         "data": {
           "auto_equipos": "Equipos, en orden de preferencia",
-          "auto_minutos": "Minutos antes del inicio"
+          "auto_minutos": "Minutos antes del inicio",
+          "auto_notificar": "Notificar en estos dispositivos",
+          "auto_titulo": "Título de la notificación",
+          "auto_mensaje": "Mensaje de la notificación"
         },
         "data_description": {
           "auto_equipos": "Sólo se ponen emisiones en directo o de estreno, nunca repeticiones.",
-          "auto_minutos": "0 = a la hora de inicio."
+          "auto_minutos": "0 = a la hora de inicio.",
+          "auto_notificar": "Dispositivos con la app de Home Assistant. Déjalo vacío para no notificar.",
+          "auto_titulo": "Plantilla (Jinja).",
+          "auto_mensaje": "Plantilla (Jinja). Si no se puede cambiar el canal, te llega un aviso con el error."
         }
       }
     },
     "error": {
       "codigo_invalido": "No parece un código válido en base64.",
-      "plantilla_invalida": "La plantilla tiene que contener {digito}."
+      "plantilla_invalida": "La plantilla tiene que contener {digito}.",
+      "plantilla_notificacion_invalida": "La plantilla no es válida."
     },
     "abort": {
       "sin_mando": "Primero configura el mando (Configurar → Mando).",

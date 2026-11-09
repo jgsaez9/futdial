@@ -18,7 +18,10 @@ from homeassistant.helpers import selector
 from .auto import equipos_auto, minutos_antes
 from .const import (
     CONF_AUTO_EQUIPOS,
+    CONF_AUTO_MENSAJE,
     CONF_AUTO_MINUTOS,
+    CONF_AUTO_NOTIFICAR,
+    CONF_AUTO_TITULO,
     CONF_CODIGOS,
     CONF_DIAS,
     CONF_DISPOSITIVO,
@@ -31,6 +34,8 @@ from .const import (
     CONF_INTERVALO,
     CONF_REPETICIONES,
     CONF_TODOS_CANALES,
+    DEFAULT_AUTO_MENSAJE,
+    DEFAULT_AUTO_TITULO,
     DEFAULT_DIAS,
     DEFAULT_INTERVALO,
     DEFAULT_PLANTILLA,
@@ -46,6 +51,7 @@ from .const import (
     NAME,
 )
 from .mando import codigo_valido, mando_configurado, normalizar_codigo
+from .notificar import VARIABLES, plantilla_valida
 from .teams import EQUIPOS_LISTA, etiqueta, resolver_equipo
 
 _OPCIONES_EQUIPOS = [
@@ -239,13 +245,28 @@ class FutDialOptionsFlow(OptionsFlow):
         seguidos = [e for e in dict.fromkeys(opts.get(CONF_EQUIPOS, [])) if e]
         if not seguidos:
             return self.async_abort(reason="sin_equipos")
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self._guardar(
-                {
-                    CONF_AUTO_EQUIPOS: list(dict.fromkeys(user_input.get(CONF_AUTO_EQUIPOS, []))),
-                    CONF_AUTO_MINUTOS: int(user_input[CONF_AUTO_MINUTOS]),
-                }
-            )
+            for clave in (CONF_AUTO_TITULO, CONF_AUTO_MENSAJE):
+                if not plantilla_valida(self.hass, user_input.get(clave) or ""):
+                    errors[clave] = "plantilla_notificacion_invalida"
+            if not errors:
+                return self._guardar(
+                    {
+                        CONF_AUTO_EQUIPOS: list(
+                            dict.fromkeys(user_input.get(CONF_AUTO_EQUIPOS, []))
+                        ),
+                        CONF_AUTO_MINUTOS: int(user_input[CONF_AUTO_MINUTOS]),
+                        CONF_AUTO_NOTIFICAR: list(user_input.get(CONF_AUTO_NOTIFICAR) or []),
+                        CONF_AUTO_TITULO: (
+                            user_input.get(CONF_AUTO_TITULO) or DEFAULT_AUTO_TITULO
+                        ).strip(),
+                        CONF_AUTO_MENSAJE: (
+                            user_input.get(CONF_AUTO_MENSAJE) or DEFAULT_AUTO_MENSAJE
+                        ).strip(),
+                    }
+                )
+            opts = {**opts, **user_input}
 
         def _nombre(valor: str) -> str:
             equipo = resolver_equipo(valor)
@@ -274,9 +295,29 @@ class FutDialOptionsFlow(OptionsFlow):
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 ),
+                vol.Optional(
+                    CONF_AUTO_NOTIFICAR, default=list(opts.get(CONF_AUTO_NOTIFICAR) or [])
+                ): selector.DeviceSelector(
+                    selector.DeviceSelectorConfig(
+                        filter=selector.DeviceFilterSelectorConfig(integration="mobile_app"),
+                        multiple=True,
+                    )
+                ),
+                vol.Required(
+                    CONF_AUTO_TITULO, default=opts.get(CONF_AUTO_TITULO) or DEFAULT_AUTO_TITULO
+                ): selector.TextSelector(),
+                vol.Required(
+                    CONF_AUTO_MENSAJE,
+                    default=opts.get(CONF_AUTO_MENSAJE) or DEFAULT_AUTO_MENSAJE,
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
             }
         )
-        return self.async_show_form(step_id="auto", data_schema=schema)
+        return self.async_show_form(
+            step_id="auto",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"variables": VARIABLES},
+        )
 
     async def async_step_codigos(
         self, user_input: dict[str, Any] | None = None

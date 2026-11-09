@@ -100,20 +100,27 @@
       },
       "auto": {
         "title": "Put matches on TV automatically",
-        "description": "Choose the teams in order of preference: the first one has priority. If two matches overlap, the one of the team with more preference is put on (and if it starts while the other one is on, the channel is switched). To change the order, remove the teams and add them again in the order you want. Pause it any time with the 'Put matches automatically' switch.",
+        "description": "Choose the teams in order of preference: the first one has priority. If two matches overlap, the one of the team with more preference is put on (and if it starts while the other one is on, the channel is switched). To change the order, remove the teams and add them again in the order you want. Pause it any time with the 'Put matches automatically' switch. Optionally, get a push notification on your phones or tablets (Home Assistant app) every time the channel is changed. Templates can use: {variables}.",
         "data": {
           "auto_equipos": "Teams, in order of preference",
-          "auto_minutos": "Minutes before kick-off"
+          "auto_minutos": "Minutes before kick-off",
+          "auto_notificar": "Notify on these devices",
+          "auto_titulo": "Notification title",
+          "auto_mensaje": "Notification message"
         },
         "data_description": {
           "auto_equipos": "Only live or first-run broadcasts are put on, never replays.",
-          "auto_minutos": "0 = at kick-off."
+          "auto_minutos": "0 = at kick-off.",
+          "auto_notificar": "Devices with the Home Assistant app. Leave empty to not send notifications.",
+          "auto_titulo": "Template (Jinja).",
+          "auto_mensaje": "Template (Jinja). If the channel cannot be changed, you get a notification with the error instead."
         }
       }
     },
     "error": {
       "codigo_invalido": "This does not look like a valid base64 code.",
-      "plantilla_invalida": "The template must contain {digito}."
+      "plantilla_invalida": "The template must contain {digito}.",
+      "plantilla_notificacion_invalida": "Invalid template."
     },
     "abort": {
       "sin_mando": "Set up the remote first (Configure → Remote).",

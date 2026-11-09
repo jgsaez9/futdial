@@ -35,6 +35,7 @@ from .const import (
 )
 from .epg import Partido
 from .mando import async_sintonizar, mando_configurado
+from .notificar import async_notificar
 from .teams import resolver_equipo
 
 _LOGGER = logging.getLogger(__name__)
@@ -227,19 +228,41 @@ class AutoSintonizador:
         self._hechos = {c: fin for c, fin in self._hechos.items() if fin > ahora}
         self.replanificar()
 
+    def _variables(self, prog: Programado) -> dict[str, Any]:
+        """Variables para las plantillas de la notificación."""
+        p = prog.partido
+        d = p.as_dict(dt_util.utcnow(), dt_util.get_default_time_zone())
+        local, _, visitante = p.partido.partition(" - ")
+        claves = (
+            "partido", "competicion", "canal", "dial", "canal_dial",
+            "fecha", "hora", "fecha_hora", "cuando",
+        )
+        return {
+            **{k: d[k] for k in claves},
+            "local": local.strip(),
+            "visitante": visitante.strip() or local.strip(),
+            "equipo": prog.equipo,
+            "minutos": self.minutos,
+        }
+
     async def _poner(self, prog: Programado) -> None:
         p = prog.partido
         dial = p.principal.dial
         tz = dt_util.get_default_time_zone()
         datos = prog.as_dict(tz)
+        options = dict(self._entry.options)
+        error: str | None = None
         try:
-            await async_sintonizar(self.hass, dict(self._entry.options), dial)
+            await async_sintonizar(self.hass, options, dial)
         except HomeAssistantError as err:
             _LOGGER.warning("No se pudo poner %s (dial %s): %s", p.partido, dial, err)
-            datos["error"] = str(err)
+            error = datos["error"] = str(err)
         else:
             _LOGGER.info("Puesto automáticamente %s en %s", p.partido, p.canal_dial)
         datos["puesto"] = dt_util.now().isoformat()
+        datos["notificados"] = await async_notificar(
+            self.hass, options, self._variables(prog), error
+        )
         self.ultimo = datos
         self.hass.bus.async_fire(EVENT_AUTO, datos)
         async_dispatcher_send(self.hass, f"{SIGNAL_AUTO_UPDATED}_{self._entry.entry_id}")

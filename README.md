@@ -41,7 +41,12 @@ En **FutDial → Configurar** hay tres apartados:
 - Si dos partidos coinciden, manda el del equipo con más preferencia: el otro no se pone, y si ya estaba puesto se cambia al preferido cuando le toque. Si ambos juegan el mismo partido, se pone una sola vez.
 - Sólo directos y estrenos, nunca repeticiones.
 - Para cambiar el orden, quita los equipos y vuelve a añadirlos en el orden que quieras.
-- Cada vez que pone un partido lanza el evento `futdial_partido_puesto` (útil para notificaciones).
+- **Notificaciones push**: elige uno o varios dispositivos con la app de Home Assistant (iPhone, iPad, Android…) y recibirás un aviso cada vez que cambie de canal. Título y mensaje son plantillas editables; por defecto:
+  > **📺 Atlético de Madrid - FC Barcelona**
+  > He cambiado al M+ LALIGA - 54 para el Atlético de Madrid - FC Barcelona, que empieza a las 21:00.
+
+  Variables: `partido`, `local`, `visitante`, `equipo`, `competicion`, `canal`, `dial`, `canal_dial`, `hora`, `fecha`, `fecha_hora`, `cuando`, `minutos`.
+- Cada vez que pone un partido también lanza el evento `futdial_partido_puesto`.
 
 ## Entidades
 
