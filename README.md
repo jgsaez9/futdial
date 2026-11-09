@@ -21,7 +21,7 @@ Integración para Home Assistant que te dice **en qué canal y dial de Movistar 
 
 ## Configuración
 
-En **FutDial → Configurar** hay dos apartados:
+En **FutDial → Configurar** hay tres apartados:
 
 ### General
 
@@ -34,6 +34,14 @@ En **FutDial → Configurar** hay dos apartados:
 - Elige tu entidad `remote` (p. ej. un Broadlink).
 - Modo **Descodificador Movistar+ (códigos incluidos)**: no hay que configurar nada más.
 - También admite tus propios códigos IR por dígito o una plantilla de comando (p. ej. `KEYCODE_{digito}` para Android TV).
+
+### Automático (poner los partidos solos)
+
+- Elige los equipos **en orden de preferencia** y cuántos minutos antes del inicio se pone el canal (p. ej. 30).
+- Si dos partidos coinciden, manda el del equipo con más preferencia: el otro no se pone, y si ya estaba puesto se cambia al preferido cuando le toque. Si ambos juegan el mismo partido, se pone una sola vez.
+- Sólo directos y estrenos, nunca repeticiones.
+- Para cambiar el orden, quita los equipos y vuelve a añadirlos en el orden que quieras.
+- Cada vez que pone un partido lanza el evento `futdial_partido_puesto` (útil para notificaciones).
 
 ## Entidades
 
@@ -54,6 +62,8 @@ Además:
 | `sensor.futdial_resultado_busqueda` (+ `_dial`, `_fecha`) | Resultado de esa búsqueda |
 | `button.futdial_poner_resultado_busqueda` | Pone en la tele lo buscado |
 | `sensor.futdial_partidos_hoy` | Partidos que quedan hoy, con canal y dial |
+| `switch.futdial_poner_partidos_automaticamente` | Activa o pausa el modo automático |
+| `sensor.futdial_proximo_partido_automatico` | Cuándo y qué partido se pondrá solo (atributos `programados` y `descartados`) |
 
 Sólo cuenta las emisiones en directo o de estreno. Si un partido va por varios canales, aparecen todos.
 

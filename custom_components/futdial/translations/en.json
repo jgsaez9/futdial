@@ -31,7 +31,8 @@
         "title": "FutDial options",
         "menu_options": {
           "general": "General: teams, refresh and channels",
-          "mando": "Remote: put the match on TV"
+          "mando": "Remote: put the match on TV",
+          "auto": "Automatic: put matches on TV by themselves"
         }
       },
       "general": {
@@ -96,11 +97,27 @@
           "plantilla": "Examples: \"{digito}\" for Broadlink learned commands named 0…9, or \"KEYCODE_{digito}\" for Android TV.",
           "dispositivo": "Device name used when learning the commands in Broadlink (e.g. movistar)."
         }
+      },
+      "auto": {
+        "title": "Put matches on TV automatically",
+        "description": "Choose the teams in order of preference: the first one has priority. If two matches overlap, the one of the team with more preference is put on (and if it starts while the other one is on, the channel is switched). To change the order, remove the teams and add them again in the order you want. Pause it any time with the 'Put matches automatically' switch.",
+        "data": {
+          "auto_equipos": "Teams, in order of preference",
+          "auto_minutos": "Minutes before kick-off"
+        },
+        "data_description": {
+          "auto_equipos": "Only live or first-run broadcasts are put on, never replays.",
+          "auto_minutos": "0 = at kick-off."
+        }
       }
     },
     "error": {
       "codigo_invalido": "This does not look like a valid base64 code.",
       "plantilla_invalida": "The template must contain {digito}."
+    },
+    "abort": {
+      "sin_mando": "Set up the remote first (Configure → Remote).",
+      "sin_equipos": "Add the teams to follow first (Configure → General)."
     }
   },
   "exceptions": {

@@ -14,7 +14,8 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from . import resultado_busqueda
-from .const import CONF_EQUIPOS, SIGNAL_QUERY_UPDATED, SIN_EMISION
+from .auto import equipos_auto
+from .const import CONF_EQUIPOS, SIGNAL_AUTO_UPDATED, SIGNAL_QUERY_UPDATED, SIN_EMISION
 from .coordinator import FutDialConfigEntry
 from .entity import FutDialEntity
 from .epg import agrupar, filtrar
@@ -42,6 +43,8 @@ async def async_setup_entry(
     for valor in dict.fromkeys(e.strip() for e in entry.options.get(CONF_EQUIPOS, [])):
         if valor:
             entities.extend(EquipoSensor(entry, valor, tipo) for tipo in Tipo)
+    if entry.runtime_data.auto is not None:
+        entities.append(AutoSensor(entry))
     async_add_entities(entities)
 
 
@@ -205,3 +208,60 @@ class PartidosHoySensor(FutDialEntity, SensorEntity):
             "en_juego": [p for p in lista if p["en_juego"]],
             "partidos": lista[:MAX_LISTA],
         }
+
+
+class AutoSensor(FutDialEntity, SensorEntity):
+    """Cuándo se pondrá solo el próximo partido, y cuál."""
+
+    _attr_name = "Próximo partido automático"
+    _attr_icon = "mdi:television-play"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, entry: FutDialConfigEntry) -> None:
+        super().__init__(entry, "auto_proximo")
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, f"{SIGNAL_AUTO_UPDATED}_{self._entry.entry_id}", self._on_auto
+            )
+        )
+
+    @callback
+    def _on_auto(self) -> None:
+        self._recalcular()
+        self.async_write_ha_state()
+
+    @callback
+    def _recalcular(self) -> None:
+        auto = self._entry.runtime_data.auto
+        if auto is None:
+            return
+        tz = dt_util.get_default_time_zone()
+        nombres = []
+        for valor in equipos_auto(self._entry.options):
+            equipo = resolver_equipo(valor)
+            nombres.append(equipo.nombre if equipo else valor)
+        prox = auto.proximo
+        self._attr_native_value = prox.momento if prox else None
+        attrs: dict[str, Any] = {
+            "activo": auto.activo,
+            "minutos_antes": auto.minutos,
+            "orden_preferencia": nombres,
+        }
+        if prox:
+            p = prox.partido
+            attrs.update(
+                {
+                    "equipo": prox.equipo,
+                    "partido": p.partido,
+                    "canal_dial": p.canal_dial,
+                    "dial": p.principal.dial,
+                    "inicio": p.inicio.astimezone(tz).isoformat(),
+                }
+            )
+        attrs["programados"] = [x.as_dict(tz) for x in auto.programados[:10]]
+        attrs["descartados"] = [x.as_dict(tz) for x in auto.descartados[:10]]
+        attrs["ultimo"] = auto.ultimo
+        self._attr_extra_state_attributes = attrs

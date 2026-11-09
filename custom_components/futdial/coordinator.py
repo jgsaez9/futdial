@@ -7,7 +7,7 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -42,6 +42,9 @@ from .epg import (
 )
 from .teams import buscar_equipo, resolver_equipo
 
+if TYPE_CHECKING:
+    from .auto import AutoSintonizador
+
 _LOGGER = logging.getLogger(__name__)
 
 # Descargas simultáneas (cada una es un día de guía)
@@ -61,6 +64,7 @@ class RuntimeData:
 
     coordinator: FutDialCoordinator
     consulta: str = ""
+    auto: AutoSintonizador | None = None
 
 
 type FutDialConfigEntry = ConfigEntry[RuntimeData]

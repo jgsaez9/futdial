@@ -31,7 +31,8 @@
         "title": "Opciones de FutDial",
         "menu_options": {
           "general": "General: equipos, actualización y canales",
-          "mando": "Mando: poner el partido en la tele"
+          "mando": "Mando: poner el partido en la tele",
+          "auto": "Automático: poner los partidos solos"
         }
       },
       "general": {
@@ -96,11 +97,27 @@
           "plantilla": "Ejemplos: «{digito}» para comandos aprendidos en Broadlink llamados 0…9, o «KEYCODE_{digito}» para Android TV.",
           "dispositivo": "Nombre del dispositivo con el que aprendiste los comandos en Broadlink (p. ej. movistar)."
         }
+      },
+      "auto": {
+        "title": "Poner partidos automáticamente",
+        "description": "Elige los equipos en orden de preferencia: el primero manda. Si dos partidos coinciden se pone el del equipo con más preferencia (y si empieza mientras se ve el otro, se cambia de canal). Para cambiar el orden, quita los equipos y vuelve a añadirlos en el orden que quieras. Puedes pausarlo cuando quieras con el interruptor «Poner partidos automáticamente».",
+        "data": {
+          "auto_equipos": "Equipos, en orden de preferencia",
+          "auto_minutos": "Minutos antes del inicio"
+        },
+        "data_description": {
+          "auto_equipos": "Sólo se ponen emisiones en directo o de estreno, nunca repeticiones.",
+          "auto_minutos": "0 = a la hora de inicio."
+        }
       }
     },
     "error": {
       "codigo_invalido": "No parece un código válido en base64.",
       "plantilla_invalida": "La plantilla tiene que contener {digito}."
+    },
+    "abort": {
+      "sin_mando": "Primero configura el mando (Configurar → Mando).",
+      "sin_equipos": "Primero añade los equipos a seguir (Configurar → General)."
     }
   },
   "exceptions": {

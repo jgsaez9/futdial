@@ -25,6 +25,11 @@ MODO_MOVISTAR = "movistar"
 MODO_CODIGOS = "codigos"
 MODO_PLANTILLA = "plantilla"
 DEFAULT_RETARDO = 0.9
+
+# Poner partidos automáticamente (equipos en orden de preferencia)
+CONF_AUTO_EQUIPOS = "auto_equipos"
+CONF_AUTO_MINUTOS = "auto_minutos"
+DEFAULT_AUTO_MINUTOS = 30
 DEFAULT_PLANTILLA = "{digito}"
 
 DEFAULT_DIAS = 3
@@ -58,6 +63,8 @@ TICK_INTERVAL = timedelta(minutes=2)
 SIN_EMISION = "Sin emisión"
 
 SIGNAL_QUERY_UPDATED = f"{DOMAIN}_query_updated"
+SIGNAL_AUTO_UPDATED = f"{DOMAIN}_auto_updated"
+EVENT_AUTO = f"{DOMAIN}_partido_puesto"
 
 SERVICE_BUSCAR = "buscar_partido"
 SERVICE_ACTUALIZAR = "actualizar"

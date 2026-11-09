@@ -35,11 +35,12 @@ from .const import (
     SERVICE_SINTONIZAR,
     SIGNAL_QUERY_UPDATED,
 )
+from .auto import AutoSintonizador, auto_configurado
 from .coordinator import FutDialConfigEntry, FutDialCoordinator, RuntimeData
 from .mando import async_sintonizar
 from .teams import resolver_equipo
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.SENSOR, Platform.TEXT]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.SENSOR, Platform.SWITCH, Platform.TEXT]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -222,7 +223,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: FutDialConfigEntry) -> b
     # 1) Programación guardada en disco: los sensores tienen datos al instante
     descargada = await coordinator.async_cargar_cache()
     entry.runtime_data = RuntimeData(coordinator=coordinator)
+    if auto_configurado(entry.options):
+        entry.runtime_data.auto = AutoSintonizador(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Después de las plataformas: el interruptor ya ha recuperado su estado
+    if (auto := entry.runtime_data.auto) is not None:
+        auto.iniciar()
+        entry.async_on_unload(auto.detener)
 
     @callback
     def _descargar(*_: Any) -> None:

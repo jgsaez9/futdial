@@ -15,7 +15,10 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .auto import equipos_auto, minutos_antes
 from .const import (
+    CONF_AUTO_EQUIPOS,
+    CONF_AUTO_MINUTOS,
     CONF_CODIGOS,
     CONF_DIAS,
     CONF_DISPOSITIVO,
@@ -42,7 +45,7 @@ from .const import (
     MODO_PLANTILLA,
     NAME,
 )
-from .mando import codigo_valido, normalizar_codigo
+from .mando import codigo_valido, mando_configurado, normalizar_codigo
 from .teams import EQUIPOS_LISTA, etiqueta, resolver_equipo
 
 _OPCIONES_EQUIPOS = [
@@ -159,7 +162,7 @@ class FutDialOptionsFlow(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        return self.async_show_menu(step_id="init", menu_options=["general", "mando"])
+        return self.async_show_menu(step_id="init", menu_options=["general", "mando", "auto"])
 
     async def async_step_general(
         self, user_input: dict[str, Any] | None = None
@@ -225,6 +228,55 @@ class FutDialOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="mando", data_schema=schema)
+
+    async def async_step_auto(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Equipos que se ponen solos, en orden de preferencia."""
+        opts = dict(self.config_entry.options)
+        if not mando_configurado(opts):
+            return self.async_abort(reason="sin_mando")
+        seguidos = [e for e in dict.fromkeys(opts.get(CONF_EQUIPOS, [])) if e]
+        if not seguidos:
+            return self.async_abort(reason="sin_equipos")
+        if user_input is not None:
+            return self._guardar(
+                {
+                    CONF_AUTO_EQUIPOS: list(dict.fromkeys(user_input.get(CONF_AUTO_EQUIPOS, []))),
+                    CONF_AUTO_MINUTOS: int(user_input[CONF_AUTO_MINUTOS]),
+                }
+            )
+
+        def _nombre(valor: str) -> str:
+            equipo = resolver_equipo(valor)
+            return equipo.nombre if equipo else valor
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_AUTO_EQUIPOS, default=equipos_auto(opts)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            selector.SelectOptionDict(value=v, label=_nombre(v))
+                            for v in seguidos
+                        ],
+                        multiple=True,
+                        sort=False,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(
+                    CONF_AUTO_MINUTOS, default=minutos_antes(opts)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0, max=180, step=1, unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="auto", data_schema=schema)
 
     async def async_step_codigos(
         self, user_input: dict[str, Any] | None = None
